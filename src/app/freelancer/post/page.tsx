@@ -11,36 +11,51 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useRouter } from "next/navigation";
+import { Home, ArrowLeft } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
-const JOB_CATEGORIES = [
+const SKILL_CATEGORIES = [
   { id: "software", name: "Software Engineering" },
   { id: "uiux", name: "UI/UX Design" },
   // Add more categories as needed
 ];
 
-const PostJobPage = () => {
-  const [jobTitle, setJobTitle] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [budget, setBudget] = useState("");
-  const [deadline, setDeadline] = useState("");
+const FreelancerProfilePage = () => {
+  const router = useRouter();
+  const [title, setTitle] = useState("");
+  const [skills, setSkills] = useState("");
+  const [experience, setExperience] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setTimeout(() => {
-      // Simulate job posting
-      setJobTitle("");
-      setJobDescription("");
-      setCategory("");
-      setBudget("");
-      setDeadline("");
-      setIsSubmitting(false);
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-    }, 1000);
+
+    const supabase = createClient();
+    const user = await supabase.auth.getUser();
+    const { data, error } = await supabase.from("jobs").insert({
+      userid: user.data.user?.id,
+      header: title,
+      skills: skills,
+      rate: hourlyRate,
+      description: experience,
+    });
+
+    if (error) {
+      console.error(error);
+    }
+
+    console.log(data);
+    setTitle("");
+    setSkills("");
+    setExperience("");
+    setHourlyRate("");
+    setIsSubmitting(false);
+    setShowSuccess(true);
+    router.push("/freelancer");
   };
 
   return (
@@ -48,47 +63,65 @@ const PostJobPage = () => {
       {/* Header */}
       <header>
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Post a Job</h1>
+          <h1 className="text-2xl font-bold">Create Your Freelancer Profile</h1>
+          <div className="flex gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => router.back()}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Go Back
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => router.push("/freelancer")}
+              className="flex items-center gap-2"
+            >
+              <Home className="h-4 w-4" />
+              Go Home
+            </Button>
+          </div>
         </div>
       </header>
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 gap-6">
-          {/* Job Listing Form */}
+          {/* Freelancer Profile Form */}
           <Card>
             <CardHeader>
-              <CardTitle>Create New Job Listing</CardTitle>
+              <CardTitle>Create Your Profile</CardTitle>
               <CardDescription>
-                Fill out the form below to create a new job listing
+                Fill out the form below to create your freelancer profile
               </CardDescription>
             </CardHeader>
             <CardContent>
               {showSuccess && (
                 <div className="mb-4 p-3 bg-green-100 text-green-800 rounded-md">
-                  Job listing created successfully!
+                  Profile created successfully!
                 </div>
               )}
               <form onSubmit={handleSubmit}>
                 <div className="flex flex-col gap-6">
                   <div className="grid gap-2">
-                    <Label htmlFor="jobTitle">Job Title</Label>
+                    <Label htmlFor="title">Professional Title</Label>
                     <Input
-                      id="jobTitle"
-                      placeholder="e.g., Senior React Developer"
+                      id="title"
+                      placeholder="e.g., Fullstack and Mobile software engineer"
                       required
-                      value={jobTitle}
-                      onChange={(e) => setJobTitle(e.target.value)}
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Category</Label>
+                    <Label>Primary Skills</Label>
                     <div className="flex flex-wrap gap-2">
-                      {JOB_CATEGORIES.map((cat) => (
+                      {SKILL_CATEGORIES.map((cat) => (
                         <Button
                           key={cat.id}
                           type="button"
-                          variant={category === cat.id ? "default" : "outline"}
-                          onClick={() => setCategory(cat.id)}
+                          variant={skills === cat.id ? "default" : "outline"}
+                          onClick={() => setSkills(cat.id)}
                           className="flex-1 min-w-[150px]"
                         >
                           {cat.name}
@@ -97,36 +130,26 @@ const PostJobPage = () => {
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="budget">Budget (USDC)</Label>
+                    <Label htmlFor="hourlyRate">Hourly Rate (USDC)</Label>
                     <Input
-                      id="budget"
+                      id="hourlyRate"
                       type="number"
-                      placeholder="e.g., 500"
+                      placeholder="e.g., 50"
                       required
-                      value={budget}
-                      onChange={(e) => setBudget(e.target.value)}
+                      value={hourlyRate}
+                      onChange={(e) => setHourlyRate(e.target.value)}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="deadline">Deadline</Label>
-                    <Input
-                      id="deadline"
-                      type="date"
-                      required
-                      value={deadline}
-                      onChange={(e) => setDeadline(e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="jobDescription">Job Description</Label>
+                    <Label htmlFor="experience">Experience & Bio</Label>
                     <textarea
-                      id="jobDescription"
+                      id="experience"
                       rows={5}
                       className="border-input flex w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                      placeholder="Describe the job requirements, skills needed, and any other relevant details..."
+                      placeholder="Describe your experience, skills, and what makes you unique..."
                       required
-                      value={jobDescription}
-                      onChange={(e) => setJobDescription(e.target.value)}
+                      value={experience}
+                      onChange={(e) => setExperience(e.target.value)}
                     />
                   </div>
                   <Button
@@ -134,9 +157,7 @@ const PostJobPage = () => {
                     className="w-full"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting
-                      ? "Creating job listing..."
-                      : "Create Job Listing"}
+                    {isSubmitting ? "Creating profile..." : "Create Profile"}
                   </Button>
                 </div>
               </form>
@@ -148,4 +169,4 @@ const PostJobPage = () => {
   );
 };
 
-export default PostJobPage;
+export default FreelancerProfilePage;

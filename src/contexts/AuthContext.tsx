@@ -43,6 +43,16 @@ export interface Freelancer {
   farcaster?: string | null;
 }
 
+export interface Job {
+  id: string;
+  userid: string;
+  header: string;
+  skills: string;
+  rate: string;
+  description: string;
+  created_at: string;
+}
+
 export interface Invitation {
   id: string;
   email: string;
@@ -74,6 +84,7 @@ type AuthContextType = {
   freelancers: Freelancer[];
   invitations: Invitation[];
   transactions: Transaction[];
+  jobs: Job[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -89,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -106,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setFreelancers([]);
       setInvitations([]);
       setTransactions([]);
+      setJobs([]);
       setLoading(false);
       return;
     }
@@ -174,6 +187,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setTransactions(transactions);
 
+    let jobs: any[] = [];
+    if (employer) {
+      const { data: jobsData } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("userid", employer.id);
+      jobs = jobsData || [];
+    } else if (freelancer) {
+      const { data: jobsData } = await supabase.from("jobs").select("*");
+      jobs = jobsData || [];
+    }
+    setJobs(jobs);
+
     setLoading(false);
   };
 
@@ -191,6 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         freelancers,
         invitations,
         transactions,
+        jobs,
         loading,
         error,
         refetch: fetchData,
