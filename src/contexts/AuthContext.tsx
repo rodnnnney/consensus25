@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { User as SupabaseUser } from "@supabase/supabase-js";
 
 type User = {
   id: string;

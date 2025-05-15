@@ -265,6 +265,48 @@ const EmployerDashboard = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Job Types Section */}
+            <div className="mt-12">
+              <h2 className="text-2xl font-bold mb-8">Available Job Types</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Software Engineering Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Software Engineering</CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      Hire skilled software engineers for your development needs
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="list-disc pl-6 text-sm space-y-1 mb-6 text-muted-foreground">
+                      <li>Full-stack Development</li>
+                      <li>Backend Systems</li>
+                      <li>Smart Contract Development</li>
+                    </ul>
+                    <Button className="w-full">Post Job</Button>
+                  </CardContent>
+                </Card>
+
+                {/* UI/UX Design Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>UI/UX Design</CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      Find talented designers for your user interface needs
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="list-disc pl-6 text-sm space-y-1 mb-6 text-muted-foreground">
+                      <li>User Interface Design</li>
+                      <li>User Experience Design</li>
+                      <li>Prototyping & Wireframing</li>
+                    </ul>
+                    <Button className="w-full">Post Job</Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </>
         )}
       </div>
