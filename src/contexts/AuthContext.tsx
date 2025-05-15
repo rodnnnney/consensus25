@@ -27,7 +27,7 @@ export interface Employer {
   profile_image?: string | null;
 }
 
-export interface Freelancer {
+export interface Contractor {
   id: string;
   first_name?: string | null;
   last_name?: string | null;
@@ -37,20 +37,6 @@ export interface Freelancer {
   employer_id?: string | null;
   email?: string | null;
   profile_image?: string | null;
-  bio?: string | null;
-  twitter?: string | null;
-  site?: string | null;
-  farcaster?: string | null;
-}
-
-export interface Job {
-  id: string;
-  userid: string;
-  header: string;
-  skills: string;
-  rate: string;
-  description: string;
-  created_at: string;
 }
 
 export interface Invitation {
@@ -80,11 +66,10 @@ type AuthContextType = {
   user: User | null;
   userRow: UserRow | null;
   employer: Employer | null;
-  freelancer: Freelancer | null;
-  freelancers: Freelancer[];
+  contractor: Contractor | null;
+  contractors: Contractor[];
   invitations: Invitation[];
   transactions: Transaction[];
-  jobs: Job[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -96,108 +81,142 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userRow, setUserRow] = useState<UserRow | null>(null);
   const [employer, setEmployer] = useState<Employer | null>(null);
-  const [freelancer, setFreelancer] = useState<Freelancer | null>(null);
-  const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
+  const [contractor, setContractor] = useState<Contractor | null>(null);
+  const [contractors, setContractors] = useState<Contractor[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
   const fetchData = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setUser(null);
-      setUserRow(null);
-      setEmployer(null);
-      setFreelancer(null);
-      setFreelancers([]);
-      setInvitations([]);
-      setTransactions([]);
-      setJobs([]);
-      setLoading(false);
-      return;
-    }
-    const userRowRes = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    setUserRow(userRowRes.data);
-    setUser({
-      id: user.id,
-      role: userRowRes.data?.role === "employer" ? "employer" : "freelancer",
-      email: user.email || undefined,
-    });
-
-    const { data: employer } = await supabase
-      .from("employers")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    setEmployer(employer);
-
-    const { data: freelancer } = await supabase
-      .from("freelancers")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    setFreelancer(freelancer);
-
-    let freelancers: any[] = [];
-    if (employer) {
-      const { data: freelancersData } = await supabase
-        .from("freelancers")
-        .select("*")
-        .eq("employer_id", employer.id);
-      freelancers = freelancersData || [];
-    }
-    setFreelancers(freelancers);
-
-    let invitations: any[] = [];
-    if (employer) {
-      const { data: invitationsData } = await supabase
-        .from("invitations")
-        .select("*")
-        .eq("employer_id", employer.id);
-      invitations = invitationsData || [];
-    }
-    setInvitations(invitations);
-
-    let transactions: any[] = [];
-    if (employer) {
-      const freelancerIds = freelancers.map((f) => f.id);
-      if (freelancerIds.length > 0) {
-        const { data: txData } = await supabase
-          .from("transactions")
-          .select("*")
-          .in("freelancer_id", freelancerIds);
-        transactions = txData || [];
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setUser(null);
+        setUserRow(null);
+        setEmployer(null);
+        setContractor(null);
+        setContractors([]);
+        setInvitations([]);
+        setTransactions([]);
+        setLoading(false);
+        return;
       }
-    } else if (freelancer) {
-      const { data: txData } = await supabase
-        .from("transactions")
+
+      // Fetch user role
+      const userRowRes = await supabase
+        .from("users")
         .select("*")
-        .eq("freelancer_id", freelancer.id);
-      transactions = txData || [];
-    }
-    setTransactions(transactions);
+        .eq("id", user.id)
+        .single();
 
-    let jobs: any[] = [];
-    if (employer) {
-      const { data: jobsData } = await supabase.from("jobs").select("*");
-      jobs = jobsData || [];
-    } else if (freelancer) {
-      const { data: jobsData } = await supabase.from("jobs").select("*");
-      jobs = jobsData || [];
-    }
-    setJobs(jobs);
+      if (userRowRes.error) {
+        console.error("Error fetching user role:", userRowRes.error);
+        setError("Error fetching user data");
+        setLoading(false);
+        return;
+      }
 
-    setLoading(false);
+      setUserRow(userRowRes.data);
+      setUser({
+        id: user.id,
+        role: userRowRes.data?.role === "employer" ? "employer" : "freelancer",
+        email: user.email || undefined,
+      });
+
+      // Fetch employer data if user is an employer
+      if (userRowRes.data?.role === "employer") {
+        const { data: employer, error: employerError } = await supabase
+          .from("employers")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        if (employerError) {
+          console.error("Error fetching employer data:", employerError);
+        } else {
+          setEmployer(employer);
+
+          // Fetch contractors for this employer
+          if (employer) {
+            const { data: contractorsData, error: contractorsError } =
+              await supabase
+                .from("freelancers")
+                .select("*")
+                .eq("employer_id", employer.id);
+
+            if (contractorsError) {
+              console.error("Error fetching contractors:", contractorsError);
+            } else {
+              setContractors(contractorsData || []);
+            }
+
+            // Fetch invitations
+            const { data: invitationsData, error: invitationsError } =
+              await supabase
+                .from("invitations")
+                .select("*")
+                .eq("employer_id", employer.id);
+
+            if (invitationsError) {
+              console.error("Error fetching invitations:", invitationsError);
+            } else {
+              setInvitations(invitationsData || []);
+            }
+
+            // Fetch transactions
+            const contractorIds = (contractorsData || []).map((c) => c.id);
+            if (contractorIds.length > 0) {
+              const { data: txData, error: txError } = await supabase
+                .from("transactions")
+                .select("*")
+                .in("contractor_id", contractorIds);
+
+              if (txError) {
+                console.error("Error fetching transactions:", txError);
+              } else {
+                setTransactions(txData || []);
+              }
+            }
+          }
+        }
+      }
+      // Fetch freelancer data if user is a freelancer
+      else if (userRowRes.data?.role === "freelancer") {
+        const { data: freelancer, error: freelancerError } = await supabase
+          .from("freelancers")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        if (freelancerError) {
+          console.error("Error fetching freelancer data:", freelancerError);
+        } else {
+          setContractor(freelancer);
+
+          // Fetch transactions for this freelancer
+          const { data: txData, error: txError } = await supabase
+            .from("transactions")
+            .select("*")
+            .eq("contractor_id", freelancer.id);
+
+          if (txError) {
+            console.error("Error fetching transactions:", txError);
+          } else {
+            setTransactions(txData || []);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error in fetchData:", error);
+      setError("Error fetching user data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -210,11 +229,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         userRow,
         employer,
-        freelancer,
-        freelancers,
+        contractor,
+        contractors,
         invitations,
         transactions,
-        jobs,
         loading,
         error,
         refetch: fetchData,
