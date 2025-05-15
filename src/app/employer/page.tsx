@@ -18,6 +18,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Job, useAuth } from "@/contexts/AuthContext";
 import { decodeIdToken } from "../core/idToken";
+import { KeylessAccount } from "@aptos-labs/ts-sdk";
 
 const USDC_FAUCET_URL = "https://faucet.circle.com/";
 const APT_FAUCET_URL = "https://aptos.dev/en/network/faucet";
@@ -33,10 +34,16 @@ const EmployerDashboard = () => {
   const [showToast, setShowToast] = useState(false);
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-
+  const [privateKey, setPrivateKey] = useState<KeylessAccount | null>(null);
   console.log(jobs);
 
   useEffect(() => {
+    if (activeAccount) {
+      setPrivateKey(activeAccount);
+      // Save to localStorage
+      localStorage.setItem("ephemeralPrivateKey", activeAccount.toString());
+    }
+
     const fetchBalances = async () => {
       if (!activeAccount?.accountAddress) return;
 

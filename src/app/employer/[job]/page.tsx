@@ -27,6 +27,7 @@ import {
 import { useKeylessAccounts } from "@/app/core/useKeylessAccounts";
 import { testnetClient } from "@/app/core/constants";
 import { decodeIdToken } from "@/app/core/idToken";
+import { KeylessAccount } from "@aptos-labs/ts-sdk";
 
 export default function Page() {
   const { jobs } = useAuth();
@@ -41,10 +42,17 @@ export default function Page() {
     useKeylessAccounts();
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
+  const [privateKey, setPrivateKey] = useState<KeylessAccount | null>(null);
 
   const job = jobs.find((j: Job) => Number(j.id) === Number(jobId));
 
   useEffect(() => {
+    if (activeAccount) {
+      setPrivateKey(activeAccount);
+      // Save to localStorage
+      localStorage.setItem("ephemeralPrivateKey", activeAccount.toString());
+    }
+
     const fetchFreelancer = async () => {
       if (!job?.userid) return;
 
@@ -78,7 +86,7 @@ export default function Page() {
   }, [activeAccount, accounts, ephemeralKeyPair]);
 
   useEffect(() => {
-    if (!activeAccount && accounts && accounts.length > 0) {
+    if (!activeAccount && accounts && accounts.length > 0 && !privateKey) {
       const lastAccount = accounts[accounts.length - 1];
       const rawIdToken = lastAccount.idToken.raw;
       try {
@@ -92,7 +100,7 @@ export default function Page() {
         // Invalid token, do nothing
       }
     }
-  }, [activeAccount, accounts, switchKeylessAccount]);
+  }, [activeAccount, accounts, switchKeylessAccount, privateKey]);
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -132,7 +140,7 @@ export default function Page() {
       console.log("Submitting transaction...");
       // Sign and submit in one step
       const committedTxn = await aptos.signAndSubmitTransaction({
-        signer: activeAccount,
+        signer: privateKey || activeAccount,
         transaction,
       });
       console.log("Transaction submitted, hash:", committedTxn.hash);
