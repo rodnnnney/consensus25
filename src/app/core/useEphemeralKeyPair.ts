@@ -11,8 +11,8 @@ export default function useEphemeralKeyPair() {
   const ephemeralKeyPair = useMemo(() => {
     let keyPair = getEphemeralKeyPair();
 
-    // If no key pair is found, create a new one and commit it to the store
-    if (!keyPair) {
+    // Only create a new key pair if the existing one is expired or doesn't exist
+    if (!keyPair || keyPair.isExpired()) {
       keyPair = createEphemeralKeyPair();
       commitEphemeralKeyPair(keyPair);
     }

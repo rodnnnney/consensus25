@@ -15,16 +15,26 @@ import {
 import { shortenString } from "./util/shorten";
 import Image from "next/image";
 
+import { useRouter } from "next/navigation";
+import { Job, useAuth } from "@/contexts/AuthContext";
+import { decodeIdToken } from "../core/idToken";
+
 const USDC_FAUCET_URL = "https://faucet.circle.com/";
 const APT_FAUCET_URL = "https://aptos.dev/en/network/faucet";
 
 const EmployerDashboard = () => {
-  const { activeAccount } = useKeylessAccounts();
+  const { activeAccount, switchKeylessAccount, accounts } =
+    useKeylessAccounts();
+  const { jobs, employer } = useAuth();
   const ephemeralKeyPair = useEphemeralKeyPair();
   const [loginUrl, setLoginUrl] = useState<string>("");
   const [aptBalance, setAptBalance] = useState<string>("0");
   const [usdcBalance, setUsdcBalance] = useState<string>("0");
   const [showToast, setShowToast] = useState(false);
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+
+  console.log(jobs);
 
   useEffect(() => {
     const fetchBalances = async () => {
@@ -89,6 +99,34 @@ const EmployerDashboard = () => {
     }
   }, [showToast]);
 
+  // Restore keyless session on mount if possible
+  useEffect(() => {
+    if (!activeAccount && accounts && accounts.length > 0) {
+      // Try the most recent account
+      const lastAccount = accounts[accounts.length - 1];
+      const rawIdToken = lastAccount.idToken.raw;
+      try {
+        const decoded = decodeIdToken(rawIdToken);
+        // Check expiration (exp is in seconds)
+        if (decoded.exp && Date.now() / 1000 < decoded.exp) {
+          switchKeylessAccount(rawIdToken).catch((err) => {
+            if (err.message.includes("429")) {
+              setError(
+                "Rate limit exceeded. Please wait 5 minutes before trying again."
+              );
+            } else {
+              setError(
+                "Failed to restore session. Please try signing in again."
+              );
+            }
+          });
+        }
+      } catch (e) {
+        // Invalid token, do nothing
+      }
+    }
+  }, [activeAccount, accounts, switchKeylessAccount]);
+
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
@@ -141,6 +179,11 @@ const EmployerDashboard = () => {
             {showToast && (
               <div className="fixed top-6 left-1/2 z-50 -translate-x-1/2 bg-black text-white px-4 py-2 rounded shadow-lg animate-fade-in">
                 Address copied to clipboard!
+              </div>
+            )}
+            {error && (
+              <div className="fixed top-6 left-1/2 z-50 -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded shadow-lg">
+                {error}
               </div>
             )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -266,45 +309,56 @@ const EmployerDashboard = () => {
               </Card>
             </div>
 
-            {/* Job Types Section */}
+            {/* Job Listings Section */}
             <div className="mt-12">
-              <h2 className="text-2xl font-bold mb-8">Available Job Types</h2>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-bold">Available Job Listings</h2>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Software Engineering Card */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Software Engineering</CardTitle>
-                    <CardDescription className="text-muted-foreground">
-                      Hire skilled software engineers for your development needs
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="list-disc pl-6 text-sm space-y-1 mb-6 text-muted-foreground">
-                      <li>Full-stack Development</li>
-                      <li>Backend Systems</li>
-                      <li>Smart Contract Development</li>
-                    </ul>
-                    <Button className="w-full">Post Job</Button>
-                  </CardContent>
-                </Card>
-
-                {/* UI/UX Design Card */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>UI/UX Design</CardTitle>
-                    <CardDescription className="text-muted-foreground">
-                      Find talented designers for your user interface needs
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="list-disc pl-6 text-sm space-y-1 mb-6 text-muted-foreground">
-                      <li>User Interface Design</li>
-                      <li>User Experience Design</li>
-                      <li>Prototyping & Wireframing</li>
-                    </ul>
-                    <Button className="w-full">Post Job</Button>
-                  </CardContent>
-                </Card>
+                {jobs.map((job: Job) => (
+                  <Card
+                    key={job.id}
+                    className="hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => router.push(`/employer/${job.id}`)}
+                  >
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">
+                            {job.header}
+                          </CardTitle>
+                          <CardDescription className="mt-2">
+                            {job.description}
+                          </CardDescription>
+                        </div>
+                        <div className="px-3 py-1 bg-primary/10 rounded-full text-sm font-medium">
+                          {job.rate} USDC/hr
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {job.skills.split(",").map((skill, index) => (
+                          <span
+                            key={index}
+                            className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
+                          >
+                            {skill.trim()}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-4 text-sm text-muted-foreground">
+                        Posted {new Date(job.created_at).toLocaleDateString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {jobs.length === 0 && (
+                  <div className="col-span-2 text-center py-8 text-muted-foreground">
+                    No active job listings found. Click "Post New Job" to create
+                    one!
+                  </div>
+                )}
               </div>
             </div>
           </>

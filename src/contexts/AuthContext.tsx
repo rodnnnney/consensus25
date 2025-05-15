@@ -189,10 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let jobs: any[] = [];
     if (employer) {
-      const { data: jobsData } = await supabase
-        .from("jobs")
-        .select("*")
-        .eq("userid", employer.id);
+      const { data: jobsData } = await supabase.from("jobs").select("*");
       jobs = jobsData || [];
     } else if (freelancer) {
       const { data: jobsData } = await supabase.from("jobs").select("*");
