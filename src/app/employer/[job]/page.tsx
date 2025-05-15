@@ -15,6 +15,18 @@ import type { Job, Freelancer } from "@/contexts/AuthContext";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft, Home } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useKeylessAccounts } from "@/app/core/useKeylessAccounts";
+import { testnetClient, testnetClient1 } from "@/app/core/constants";
+import { decodeIdToken } from "@/app/core/idToken";
 
 export default function Page() {
   const { jobs } = useAuth();
@@ -24,6 +36,11 @@ export default function Page() {
   const [freelancer, setFreelancer] = useState<Freelancer | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { activeAccount, accounts, ephemeralKeyPair, switchKeylessAccount } =
+    useKeylessAccounts();
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [txError, setTxError] = useState<string | null>(null);
 
   const job = jobs.find((j: Job) => Number(j.id) === Number(jobId));
 
@@ -53,6 +70,120 @@ export default function Page() {
 
     fetchFreelancer();
   }, [job?.userid]);
+
+  useEffect(() => {
+    console.log("Active Account:", activeAccount);
+    console.log("Accounts:", accounts);
+    console.log("Ephemeral Key Pair:", ephemeralKeyPair);
+  }, [activeAccount, accounts, ephemeralKeyPair]);
+
+  useEffect(() => {
+    if (!activeAccount && accounts && accounts.length > 0) {
+      const lastAccount = accounts[accounts.length - 1];
+      const rawIdToken = lastAccount.idToken.raw;
+      try {
+        const decoded = decodeIdToken(rawIdToken);
+        if (decoded.exp && Date.now() / 1000 < decoded.exp) {
+          switchKeylessAccount(rawIdToken).catch((err) => {
+            console.error("Failed to restore keyless account:", err);
+          });
+        }
+      } catch (e) {
+        // Invalid token, do nothing
+      }
+    }
+  }, [activeAccount, accounts, switchKeylessAccount]);
+
+  const handlePayment = async () => {
+    setIsProcessing(true);
+    setTxError(null);
+    setTxHash(null);
+
+    try {
+      if (!job) return;
+      if (!freelancer) return;
+      if (!activeAccount) {
+        setTxError("Please connect your wallet first");
+        return;
+      }
+      const amount = Number(job.rate);
+
+      const aptos = await testnetClient1();
+
+      console.log("Building transaction...");
+      const USDC_TYPE = "0x1::coin::Coin<0x1::coin::USDC>";
+
+      // First, try to register the USDC coin if it's not already registered
+      try {
+        const registerTxn = await aptos.transaction.build.simple({
+          sender: activeAccount.accountAddress,
+          data: {
+            function: "0x1::coin::register",
+            typeArguments: [USDC_TYPE],
+            functionArguments: [],
+          },
+        });
+
+        await aptos.signAndSubmitTransaction({
+          signer: activeAccount,
+          transaction: registerTxn,
+        });
+      } catch (e) {
+        // If registration fails, it might already be registered, which is fine
+        console.log("USDC might already be registered:", e);
+      }
+
+      // Now proceed with the transfer
+      const transaction = await aptos.transaction.build.simple({
+        sender: activeAccount.accountAddress,
+        data: {
+          function: "0x1::coin::transfer",
+          typeArguments: [USDC_TYPE],
+          functionArguments: [freelancer.wallet_address, amount * 1e6],
+        },
+      });
+      console.log("Transaction built:", transaction);
+
+      console.log("Submitting transaction...");
+      // Sign and submit in one step
+      const committedTxn = await aptos.signAndSubmitTransaction({
+        signer: activeAccount,
+        transaction,
+      });
+      console.log("Transaction submitted, hash:", committedTxn.hash);
+
+      console.log("Waiting for transaction confirmation...");
+      const result = await aptos.waitForTransaction({
+        transactionHash: committedTxn.hash,
+      });
+      console.log("Transaction result:", result);
+
+      if (result.success) {
+        setTxHash(result.hash);
+        console.log("Recording transaction in database...");
+        await supabase.from("transactions").insert({
+          contractor_id: freelancer.id,
+          usdc_price: job.rate,
+          usdc_amount: amount,
+          status: "completed",
+          tx_hash: result.hash,
+        });
+        console.log("Transaction recorded in database");
+        alert("Payment successful!");
+      } else {
+        throw new Error("Transaction failed");
+      }
+    } catch (error) {
+      console.error("Payment failed:", error);
+      setTxError(
+        error instanceof Error
+          ? error.message
+          : "Payment failed. Please try again."
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (!job) {
     return <div className="p-8 text-center">Job not found.</div>;
@@ -112,7 +243,9 @@ export default function Page() {
             </div>
           </div>
           <CardTitle className="text-2xl">{job.header}</CardTitle>
-          <CardDescription className="mt-2">{job.description}</CardDescription>
+          <CardDescription className="mt-2 prose prose-sm max-w-none">
+            <ReactMarkdown>{job.description}</ReactMarkdown>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2 mb-4">
@@ -166,6 +299,38 @@ export default function Page() {
                 Farcaster
               </a>
             )}
+          </div>
+          <div className="mt-8 border-t pt-6">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="w-full" size="lg">
+                  Pay {job.rate} USDC/hr
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirm Payment</DialogTitle>
+                  <DialogDescription>
+                    You are about to pay {job.rate} USDC/hr to{" "}
+                    {freelancer?.first_name} {freelancer?.last_name} for the job
+                    "{job.header}".
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="mt-4 space-y-4">
+                  {txError && (
+                    <div className="text-red-500 text-sm">{txError}</div>
+                  )}
+                  {txHash && (
+                    <div className="text-green-500 text-sm">
+                      Transaction successful! Hash: {txHash}
+                    </div>
+                  )}
+                  <Button className="w-full" onClick={handlePayment}>
+                    {isProcessing ? "Processing..." : "Confirm Payment"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </CardContent>
       </Card>

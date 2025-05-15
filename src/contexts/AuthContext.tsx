@@ -16,6 +16,13 @@ export interface UserRow {
   created_at: string;
 }
 
+export interface Job {
+  id: string;
+  title: string;
+  description: string;
+  created_at: string;
+}
+
 export interface Employer {
   id: string;
   company_name: string;
@@ -27,7 +34,7 @@ export interface Employer {
   profile_image?: string | null;
 }
 
-export interface Contractor {
+export interface Freelancer {
   id: string;
   first_name?: string | null;
   last_name?: string | null;
@@ -66,8 +73,8 @@ type AuthContextType = {
   user: User | null;
   userRow: UserRow | null;
   employer: Employer | null;
-  contractor: Contractor | null;
-  contractors: Contractor[];
+  Freelancer: Freelancer | null;
+  contractors: Freelancer[];
   invitations: Invitation[];
   transactions: Transaction[];
   loading: boolean;
@@ -81,8 +88,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userRow, setUserRow] = useState<UserRow | null>(null);
   const [employer, setEmployer] = useState<Employer | null>(null);
-  const [contractor, setContractor] = useState<Contractor | null>(null);
-  const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [Freelancer, setContractor] = useState<Freelancer | null>(null);
+  const [contractors, setContractors] = useState<Freelancer[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -229,7 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         userRow,
         employer,
-        contractor,
+        Freelancer,
         contractors,
         invitations,
         transactions,
