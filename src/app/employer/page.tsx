@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { shortenString } from "./util/shorten";
 import Image from "next/image";
+import Link from "next/link"
 
 const USDC_FAUCET_URL = "https://faucet.circle.com/";
 const APT_FAUCET_URL = "https://aptos.dev/en/network/faucet";
@@ -284,7 +285,9 @@ const EmployerDashboard = () => {
                       <li>Backend Systems</li>
                       <li>Smart Contract Development</li>
                     </ul>
-                    <Button className="w-full">Post Job</Button>
+                      <Link href="/post-job">
+                      <Button className="w-full">Post Job</Button>
+                    </Link>
                   </CardContent>
                 </Card>
 
@@ -302,7 +305,9 @@ const EmployerDashboard = () => {
                       <li>User Experience Design</li>
                       <li>Prototyping & Wireframing</li>
                     </ul>
-                    <Button className="w-full">Post Job</Button>
+                    <Link href="/post-job">
+                      <Button className="w-full">Post Job</Button>
+                    </Link>
                   </CardContent>
                 </Card>
               </div>
