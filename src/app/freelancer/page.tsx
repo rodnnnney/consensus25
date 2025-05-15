@@ -17,7 +17,7 @@ import { Twitter, Globe } from "lucide-react";
 
 const FreelancerDashboard = () => {
   const { activeAccount } = useKeylessAccounts();
-  const { freelancer, jobs } = useAuth();
+  const { Freelancer, jobs } = useAuth();
   const [showNewListingForm, setShowNewListingForm] = useState(false);
   const [aptBalance, setAptBalance] = useState<string>("0");
   const [usdcBalance, setUsdcBalance] = useState<string>("0");
@@ -35,9 +35,9 @@ const FreelancerDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-16">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mr-4 overflow-hidden">
-                {freelancer?.profile_image ? (
+                {Freelancer?.profile_image ? (
                   <Image
-                    src={freelancer.profile_image}
+                    src={Freelancer.profile_image}
                     alt="Profile"
                     width={48}
                     height={48}
@@ -45,28 +45,28 @@ const FreelancerDashboard = () => {
                   />
                 ) : (
                   <span className="text-xl font-bold">
-                    {freelancer?.first_name?.[0] ||
-                      freelancer?.last_name?.[0] ||
+                    {Freelancer?.first_name?.[0] ||
+                      Freelancer?.last_name?.[0] ||
                       activeAccount?.accountAddress.toString().slice(0, 2)}
                   </span>
                 )}
               </div>
               <div>
                 <h3 className="font-semibold">
-                  {freelancer?.first_name && freelancer?.last_name
-                    ? `${freelancer.first_name} ${freelancer.last_name}`
+                  {Freelancer?.first_name && Freelancer?.last_name
+                    ? `${Freelancer.first_name} ${Freelancer.last_name}`
                     : "Freelancer Account"}
                 </h3>
-                {freelancer?.bio && (
-                  <p className="text-sm mt-4 max-w-[50%]">{freelancer.bio}</p>
+                {Freelancer?.bio && (
+                  <p className="text-sm mt-4 max-w-[50%]">{Freelancer.bio}</p>
                 )}
-                {(freelancer?.twitter ||
-                  freelancer?.site ||
-                  freelancer?.farcaster) && (
+                {(Freelancer?.twitter ||
+                  Freelancer?.site ||
+                  Freelancer?.farcaster) && (
                   <div className="flex gap-4 mt-2">
-                    {freelancer.twitter && (
+                    {Freelancer.twitter && (
                       <a
-                        href={freelancer.twitter}
+                        href={Freelancer.twitter}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-blue-500 hover:underline flex items-center gap-1"
@@ -75,9 +75,9 @@ const FreelancerDashboard = () => {
                         Twitter
                       </a>
                     )}
-                    {freelancer.site && (
+                    {Freelancer.site && (
                       <a
-                        href={freelancer.site}
+                        href={Freelancer.site}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-blue-500 hover:underline flex items-center gap-1"
@@ -86,9 +86,9 @@ const FreelancerDashboard = () => {
                         Website
                       </a>
                     )}
-                    {freelancer.farcaster && (
+                    {Freelancer.farcaster && (
                       <a
-                        href={freelancer.farcaster}
+                        href={Freelancer.farcaster}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-blue-500 hover:underline"

@@ -21,6 +21,10 @@ export interface Job {
   title: string;
   description: string;
   created_at: string;
+  userid: string;
+  header: string;
+  rate: string;
+  skills: string;
 }
 
 export interface Employer {
@@ -40,6 +44,10 @@ export interface Freelancer {
   last_name?: string | null;
   tax_id?: string | null;
   country?: string | null;
+  bio?: string | null;
+  twitter?: string | null;
+  site?: string | null;
+  farcaster?: string | null;
   wallet_address?: string | null;
   employer_id?: string | null;
   email?: string | null;
@@ -77,6 +85,8 @@ type AuthContextType = {
   contractors: Freelancer[];
   invitations: Invitation[];
   transactions: Transaction[];
+  jobs: Job[];
+  freelancers: Freelancer[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -92,6 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [contractors, setContractors] = useState<Freelancer[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -110,6 +122,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setContractors([]);
         setInvitations([]);
         setTransactions([]);
+        setJobs([]);
+        setFreelancers([]);
         setLoading(false);
         return;
       }
@@ -218,6 +232,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       }
+
+      // Fetch jobs for all users
+      const { data: jobsData, error: jobsError } = await supabase
+        .from("jobs")
+        .select("*");
+      if (jobsError) {
+        console.error("Error fetching jobs:", jobsError);
+        setJobs([]);
+      } else {
+        setJobs(jobsData || []);
+      }
+
+      // Fetch all freelancers
+      const { data: freelancersData, error: freelancersError } = await supabase
+        .from("freelancers")
+        .select("*");
+      if (freelancersError) {
+        console.error("Error fetching freelancers:", freelancersError);
+        setFreelancers([]);
+      } else {
+        setFreelancers(freelancersData || []);
+      }
     } catch (error) {
       console.error("Error in fetchData:", error);
       setError("Error fetching user data");
@@ -240,6 +276,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         contractors,
         invitations,
         transactions,
+        jobs,
+        freelancers,
         loading,
         error,
         refetch: fetchData,

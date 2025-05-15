@@ -25,7 +25,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useKeylessAccounts } from "@/app/core/useKeylessAccounts";
-import { testnetClient, testnetClient1 } from "@/app/core/constants";
+import { testnetClient } from "@/app/core/constants";
 import { decodeIdToken } from "@/app/core/idToken";
 
 export default function Page() {
@@ -108,38 +108,23 @@ export default function Page() {
       }
       const amount = Number(job.rate);
 
-      const aptos = await testnetClient1();
+      const aptos = testnetClient;
 
       console.log("Building transaction...");
-      const USDC_TYPE = "0x1::coin::Coin<0x1::coin::USDC>";
-
-      // First, try to register the USDC coin if it's not already registered
-      try {
-        const registerTxn = await aptos.transaction.build.simple({
-          sender: activeAccount.accountAddress,
-          data: {
-            function: "0x1::coin::register",
-            typeArguments: [USDC_TYPE],
-            functionArguments: [],
-          },
-        });
-
-        await aptos.signAndSubmitTransaction({
-          signer: activeAccount,
-          transaction: registerTxn,
-        });
-      } catch (e) {
-        // If registration fails, it might already be registered, which is fine
-        console.log("USDC might already be registered:", e);
-      }
+      const USDC_ADDRESS =
+        "0x69091fbab5f7d635ee7ac5098cf0c1efbe31d68fec0f2cd565e8d168daf52832";
 
       // Now proceed with the transfer
       const transaction = await aptos.transaction.build.simple({
         sender: activeAccount.accountAddress,
         data: {
-          function: "0x1::coin::transfer",
-          typeArguments: [USDC_TYPE],
-          functionArguments: [freelancer.wallet_address, amount * 1e6],
+          function: "0x1::primary_fungible_store::transfer",
+          typeArguments: ["0x1::object::ObjectCore"],
+          functionArguments: [
+            USDC_ADDRESS,
+            freelancer.wallet_address,
+            amount * 1e6,
+          ],
         },
       });
       console.log("Transaction built:", transaction);

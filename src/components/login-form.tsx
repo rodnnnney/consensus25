@@ -27,6 +27,7 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { refetch } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +68,7 @@ export function LoginForm({
         router.push("/employer");
       } else {
         console.log("No role found, routing to login");
+
         router.push("/auth/login");
       }
     } catch (error: unknown) {
@@ -75,6 +77,7 @@ export function LoginForm({
     } finally {
       setIsLoading(false);
       router.refresh();
+      refetch();
     }
   };
 
