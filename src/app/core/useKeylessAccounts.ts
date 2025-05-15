@@ -8,7 +8,7 @@ import {
 } from "@aptos-labs/ts-sdk";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { LocalStorageKeys, devnetClient } from "./constants";
+import { LocalStorageKeys, testnetClient } from "./constants";
 import { validateIdToken } from "./idToken";
 import {
   EphemeralKeyPairEncoding,
@@ -141,7 +141,7 @@ export const useKeylessAccounts = create<
           );
           let activeAccount: KeylessAccount | undefined;
           try {
-            activeAccount = await devnetClient.deriveKeylessAccount({
+            activeAccount = await testnetClient.deriveKeylessAccount({
               ephemeralKeyPair,
               jwt: idToken,
               proofFetchCallback,
@@ -149,7 +149,7 @@ export const useKeylessAccounts = create<
           } catch (error) {
             // If we cannot derive an account using the pepper service, attempt to derive it using the stored pepper
             if (!storedAccount?.pepper) throw error;
-            activeAccount = await devnetClient.deriveKeylessAccount({
+            activeAccount = await testnetClient.deriveKeylessAccount({
               ephemeralKeyPair,
               jwt: idToken,
               pepper: storedAccount.pepper,

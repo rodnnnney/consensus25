@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useKeylessAccounts } from "../core/useKeylessAccounts";
-import { GOOGLE_CLIENT_ID, devnetClient } from "../core/constants";
+import { GOOGLE_CLIENT_ID, testnetClient } from "../core/constants";
 import useEphemeralKeyPair from "../core/useEphemeralKeyPair";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { shortenString } from "./util/shorten";
+import Image from "next/image";
+
 const USDC_FAUCET_URL = "https://faucet.circle.com/";
 const APT_FAUCET_URL = "https://aptos.dev/en/network/faucet";
 
@@ -29,50 +31,37 @@ const EmployerDashboard = () => {
       if (!activeAccount?.accountAddress) return;
 
       try {
-        // Fetch APT balance
-        try {
-          const tokens = await devnetClient.getAccountOwnedTokens({
-            accountAddress: activeAccount.accountAddress,
-          });
-          console.log(tokens);
-          const aptResource = await devnetClient.getAccountResource({
-            accountAddress: activeAccount.accountAddress,
-            resourceType: "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>",
-          });
-          setAptBalance(aptResource.coin.value);
-        } catch (error) {
-          // If resource not found, set balance to 0
+        // Fetch all coins for the account
+        const accountCoinsData = await testnetClient.getAccountCoinsData({
+          accountAddress: activeAccount.accountAddress,
+          options: { limit: 10 },
+        });
+
+        // Find APT and USDC balances
+        let aptBalance = "0";
+        let usdcBalance = "0";
+
+        for (const coin of accountCoinsData) {
           if (
-            error instanceof Error &&
-            error.message.includes("Resource not found")
+            coin.asset_type === "0x1::aptos_coin::AptosCoin" ||
+            coin.metadata?.symbol === "APT"
           ) {
-            setAptBalance("0");
-          } else {
-            throw error; // Re-throw other errors
+            aptBalance = (Number(coin.amount) / 1e8).toString(); // Adjust decimals if needed
+          }
+          if (
+            coin.metadata?.symbol === "USDC" ||
+            (coin.asset_type && coin.asset_type.toLowerCase().includes("usdc"))
+          ) {
+            usdcBalance = (Number(coin.amount) / 1e6).toString(); // USDC is usually 6 decimals
           }
         }
 
-        // Fetch USDC balance
-        try {
-          const usdcResource = await devnetClient.getAccountResource({
-            accountAddress: activeAccount.accountAddress,
-            resourceType:
-              "0x1::coin::CoinStore<0x1::coin::Coin<0x1::usdc::USDC>>",
-          });
-          setUsdcBalance(usdcResource.coin.value);
-        } catch (error) {
-          // If resource not found, set balance to 0
-          if (
-            error instanceof Error &&
-            error.message.includes("Resource not found")
-          ) {
-            setUsdcBalance("0");
-          } else {
-            throw error; // Re-throw other errors
-          }
-        }
+        setAptBalance(aptBalance);
+        setUsdcBalance(usdcBalance);
       } catch (error) {
         console.error("Error fetching balances:", error);
+        setAptBalance("0");
+        setUsdcBalance("0");
       }
     };
 
@@ -205,6 +194,11 @@ const EmployerDashboard = () => {
                         </svg>
                       </Button>
                     </div>
+                    <div className="flex items-center">
+                      <div className="px-2 pb-1 bg-green-100 border border-green-500 text-green-700 rounded-md animate-pulse">
+                        <span className="text-green-700 text-xs">Active</span>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -217,7 +211,16 @@ const EmployerDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="text-2xl font-bold">{aptBalance} APT</div>
+                    <div className="flex items-center gap-2 text-2xl font-bold">
+                      <Image
+                        src="/aptos.png"
+                        alt="Aptos Logo"
+                        width={24}
+                        height={24}
+                        className="w-6 h-6"
+                      />
+                      {aptBalance} APT
+                    </div>
                     <p className="text-sm text-muted-foreground underline">
                       <a
                         href={APT_FAUCET_URL}
@@ -239,7 +242,16 @@ const EmployerDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="text-2xl font-bold">{usdcBalance} USDC</div>
+                    <div className="flex items-center gap-2 text-2xl font-bold">
+                      <Image
+                        src="/usdc.png"
+                        alt="USDC Logo"
+                        width={24}
+                        height={24}
+                        className="w-6 h-6"
+                      />
+                      {usdcBalance} USDC
+                    </div>
                     <p className="text-sm text-muted-foreground underline">
                       <a
                         href={USDC_FAUCET_URL}

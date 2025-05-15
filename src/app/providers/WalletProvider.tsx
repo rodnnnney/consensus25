@@ -8,7 +8,7 @@ export function WalletProvider({ children }: PropsWithChildren) {
   return (
     <AptosWalletAdapterProvider
       optInWallets={["Petra"]}
-      autoConnect={true}
+      autoConnect={false}
       dappConfig={{ network: Network.TESTNET }}
       onError={(error) => {
         console.log("error", error);

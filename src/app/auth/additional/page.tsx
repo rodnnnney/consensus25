@@ -31,7 +31,10 @@ export default function Page() {
   const [error, setError] = useState("");
   const router = useRouter();
   const supabase = createClient();
-  const { connect, account, connected } = useWallet();
+  const { connect, account, connected, wallets } = useWallet();
+
+  // Add state for showing wallet options
+  const [showWalletOptions, setShowWalletOptions] = useState(false);
 
   // Add useEffect to update wallet address when connected
   useEffect(() => {
@@ -124,9 +127,10 @@ export default function Page() {
     router.push(`${selectedRole === "employer" ? "/employer" : "/freelancer"}`);
   };
 
-  const connectWallet = async () => {
+  const connectWallet = async (walletName: string) => {
     try {
-      connect("Petra");
+      connect(walletName);
+      setShowWalletOptions(false);
     } catch (error) {
       setError("Failed to connect wallet. Please try again.");
       console.error("Wallet connection error:", error);
@@ -251,13 +255,27 @@ export default function Page() {
                     />
                     <Button
                       type="button"
-                      onClick={connectWallet}
+                      onClick={() => setShowWalletOptions(true)}
                       disabled={loading}
                       className="whitespace-nowrap"
                     >
                       Connect Wallet
                     </Button>
                   </div>
+                  {showWalletOptions && (
+                    <div className="mt-2 border rounded-md p-2">
+                      {wallets.map((wallet) => (
+                        <Button
+                          key={wallet.name}
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => connectWallet(wallet.name)}
+                        >
+                          {wallet.name}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             )}
