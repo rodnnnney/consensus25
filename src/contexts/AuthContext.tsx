@@ -27,7 +27,7 @@ export interface Employer {
   profile_image?: string | null;
 }
 
-export interface Contractor {
+export interface Freelancer {
   id: string;
   first_name?: string | null;
   last_name?: string | null;
@@ -37,6 +37,10 @@ export interface Contractor {
   employer_id?: string | null;
   email?: string | null;
   profile_image?: string | null;
+  bio?: string | null;
+  twitter?: string | null;
+  site?: string | null;
+  farcaster?: string | null;
 }
 
 export interface Invitation {
@@ -66,8 +70,8 @@ type AuthContextType = {
   user: User | null;
   userRow: UserRow | null;
   employer: Employer | null;
-  contractor: Contractor | null;
-  contractors: Contractor[];
+  freelancer: Freelancer | null;
+  freelancers: Freelancer[];
   invitations: Invitation[];
   transactions: Transaction[];
   loading: boolean;
@@ -81,8 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userRow, setUserRow] = useState<UserRow | null>(null);
   const [employer, setEmployer] = useState<Employer | null>(null);
-  const [contractor, setContractor] = useState<Contractor | null>(null);
-  const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [freelancer, setFreelancer] = useState<Freelancer | null>(null);
+  const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -98,8 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setUserRow(null);
       setEmployer(null);
-      setContractor(null);
-      setContractors([]);
+      setFreelancer(null);
+      setFreelancers([]);
       setInvitations([]);
       setTransactions([]);
       setLoading(false);
@@ -124,22 +128,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single();
     setEmployer(employer);
 
-    const { data: contractor } = await supabase
+    const { data: freelancer } = await supabase
       .from("freelancers")
       .select("*")
       .eq("id", user.id)
       .single();
-    setContractor(contractor);
+    setFreelancer(freelancer);
 
-    let contractors: any[] = [];
+    let freelancers: any[] = [];
     if (employer) {
-      const { data: contractorsData } = await supabase
+      const { data: freelancersData } = await supabase
         .from("freelancers")
         .select("*")
         .eq("employer_id", employer.id);
-      contractors = contractorsData || [];
+      freelancers = freelancersData || [];
     }
-    setContractors(contractors);
+    setFreelancers(freelancers);
 
     let invitations: any[] = [];
     if (employer) {
@@ -153,19 +157,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let transactions: any[] = [];
     if (employer) {
-      const contractorIds = contractors.map((c) => c.id);
-      if (contractorIds.length > 0) {
+      const freelancerIds = freelancers.map((f) => f.id);
+      if (freelancerIds.length > 0) {
         const { data: txData } = await supabase
           .from("transactions")
           .select("*")
-          .in("contractor_id", contractorIds);
+          .in("freelancer_id", freelancerIds);
         transactions = txData || [];
       }
-    } else if (contractor) {
+    } else if (freelancer) {
       const { data: txData } = await supabase
         .from("transactions")
         .select("*")
-        .eq("contractor_id", contractor.id);
+        .eq("freelancer_id", freelancer.id);
       transactions = txData || [];
     }
     setTransactions(transactions);
@@ -183,8 +187,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         userRow,
         employer,
-        contractor,
-        contractors,
+        freelancer,
+        freelancers,
         invitations,
         transactions,
         loading,
