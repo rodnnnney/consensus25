@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
 
 export default function Page() {
   const [selectedRole, setSelectedRole] = useState<
@@ -30,6 +31,17 @@ export default function Page() {
   const [error, setError] = useState("");
   const router = useRouter();
   const supabase = createClient();
+  const { connect, account, connected } = useWallet();
+
+  // Add useEffect to update wallet address when connected
+  useEffect(() => {
+    if (connected && account) {
+      setUserInfo((prev) => ({
+        ...prev,
+        walletAddress: account.address.toString(),
+      }));
+    }
+  }, [connected, account]);
 
   const handleConfirm = () => {
     if (!selectedRole) return;
@@ -110,6 +122,15 @@ export default function Page() {
       return;
     }
     router.push(`${selectedRole === "employer" ? "/employer" : "/freelancer"}`);
+  };
+
+  const connectWallet = async () => {
+    try {
+      connect("Petra");
+    } catch (error) {
+      setError("Failed to connect wallet. Please try again.");
+      console.error("Wallet connection error:", error);
+    }
   };
 
   if (step === "info") {
@@ -220,18 +241,23 @@ export default function Page() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="walletAddress">Wallet Address</Label>
-                  <Input
-                    id="walletAddress"
-                    value={userInfo.walletAddress}
-                    onChange={(e) =>
-                      setUserInfo({
-                        ...userInfo,
-                        walletAddress: e.target.value,
-                      })
-                    }
-                    placeholder="Enter your wallet address"
-                    disabled={loading}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="walletAddress"
+                      value={userInfo.walletAddress}
+                      placeholder="Connect your wallet"
+                      disabled={loading}
+                      readOnly
+                    />
+                    <Button
+                      type="button"
+                      onClick={connectWallet}
+                      disabled={loading}
+                      className="whitespace-nowrap"
+                    >
+                      Connect Wallet
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
