@@ -4,6 +4,8 @@ A modern web application for freelancers to manage their profile, view balances,
 
 ## Features
 
+![employer](./public/employerdash.png)
+
 ### 1. Profile Management
 - Professional profile display with:
   - Profile image
