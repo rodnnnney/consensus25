@@ -61,10 +61,10 @@ npm run dev
 ![employer](./public/freelancer.png)
 
 ### Freelancer Post Page
-![employer](./public/freelancer.png)
+![employer](./public/freelancerpost.png)
 
 ### Freelancer Transactions Page
-![employer](./public/freelancer.png)
+![employer](./public/freelancertrans.png)
 
 ### Freelancer Profile Page
-![employer](./public/freelancer.png)
+![employer](./public/freelancerprofile.png)
