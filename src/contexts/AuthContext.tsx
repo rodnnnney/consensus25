@@ -169,6 +169,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Fetch transactions for this employer's company
           console.log("Fetching transactions for employer company:", employer.id);
+          
+          // First check all transactions with company_ids
+          const { data: allCompanyTx, error: allCompanyTxError } = await supabase
+            .from("transactions")
+            .select("*")
+            .not("company_id", "is", null);
+            
+          console.log("All transactions with company_ids:", allCompanyTx);
+          
+          // Then fetch this employer's transactions
           const { data: txData, error: txError } = await supabase
             .from("transactions")
             .select(`
@@ -255,6 +265,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Fetch transactions for this freelancer
           console.log("Fetching transactions for freelancer:", freelancer.id);
+          
+          // First, let's check if there are any transactions at all
+          const { data: allTx, error: allTxError } = await supabase
+            .from("transactions")
+            .select("*");
+          
+          console.log("All transactions in system:", allTx);
+          
+          // Now fetch transactions for this specific freelancer
           const { data: txData, error: txError } = await supabase
             .from("transactions")
             .select(`
@@ -289,6 +308,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (txData?.length > 0) {
               console.log("Sample transaction:", txData[0]);
             }
+            
+            // If no transactions found for this freelancer, check if they have a different ID in the transactions table
+            if (txData?.length === 0) {
+              console.log("No transactions found for current ID, checking transactions table for this freelancer's transactions");
+              
+              // Get all transactions and check their contractor_ids
+              const uniqueContractorIds = [...new Set(allTx?.map(tx => tx.contractor_id) || [])];
+              console.log("Unique contractor IDs in transactions:", uniqueContractorIds);
+              
+              // Check if any of these IDs match a freelancer with the same email
+              if (freelancer.email) {
+                const { data: otherFreelancer, error: otherError } = await supabase
+                  .from("freelancers")
+                  .select("*")
+                  .eq("email", freelancer.email)
+                  .in("id", uniqueContractorIds)
+                  .single();
+                
+                if (otherFreelancer) {
+                  console.log("Found matching freelancer with transactions:", otherFreelancer);
+                  // Fetch transactions for this ID instead
+                  const { data: otherTxData, error: otherTxError } = await supabase
+                    .from("transactions")
+                    .select(`
+                      id,
+                      contractor_id,
+                      usdc_price,
+                      usdc_amount,
+                      created_at,
+                      status,
+                      tx_hash,
+                      company_id,
+                      employer:employers(
+                        id,
+                        company_name,
+                        profile_image,
+                        country
+                      )
+                    `)
+                    .eq("contractor_id", otherFreelancer.id);
+                    
+                  if (!otherTxError && otherTxData) {
+                    console.log("Found transactions under different ID:", otherTxData);
+                    setTransactions(otherTxData);
+                    return;
+                  }
+                }
+              }
+            }
+            
             setTransactions(txData || []);
           }
         }
