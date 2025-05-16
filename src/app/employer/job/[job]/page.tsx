@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -27,10 +28,10 @@ import {
 import { useKeylessAccounts } from "@/app/core/useKeylessAccounts";
 import { testnetClient } from "@/app/core/constants";
 import { decodeIdToken } from "@/app/core/idToken";
-import { PostgrestError } from "@supabase/supabase-js";
+import { KeylessAccount } from "@aptos-labs/ts-sdk";
 
 export default function Page() {
-  const { jobs, refetch, employer } = useAuth();
+  const { jobs } = useAuth();
   const router = useRouter();
   const params = useParams();
   const jobId = params.job;
@@ -42,13 +43,24 @@ export default function Page() {
     useKeylessAccounts();
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
-  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [privateKey, setPrivateKey] = useState<KeylessAccount | null>(null);
 
   const job = jobs.find((j: Job) => Number(j.id) === Number(jobId));
 
   useEffect(() => {
+    if (activeAccount) {
+      setPrivateKey(activeAccount);
+      localStorage.setItem("ephemeralPrivateKey", activeAccount.toString());
+    }
+
     const fetchFreelancer = async () => {
-      if (!job?.userid) return;
+      console.log("Job:", job);
+      console.log("Job userid:", job?.userid);
+
+      if (!job?.userid) {
+        console.log("No job or userid found");
+        return;
+      }
 
       try {
         const { data, error } = await supabase
@@ -56,6 +68,8 @@ export default function Page() {
           .select("*")
           .eq("id", job.userid)
           .single();
+
+        console.log("Supabase response:", { data, error });
 
         if (error) {
           console.error("Error fetching freelancer:", error);
@@ -80,7 +94,7 @@ export default function Page() {
   }, [activeAccount, accounts, ephemeralKeyPair]);
 
   useEffect(() => {
-    if (!activeAccount && accounts && accounts.length > 0) {
+    if (!activeAccount && accounts && accounts.length > 0 && !privateKey) {
       const lastAccount = accounts[accounts.length - 1];
       const rawIdToken = lastAccount.idToken.raw;
       try {
@@ -94,18 +108,16 @@ export default function Page() {
         // Invalid token, do nothing
       }
     }
-  }, [activeAccount, accounts, switchKeylessAccount]);
+  }, [activeAccount, accounts, switchKeylessAccount, privateKey]);
 
   const handlePayment = async () => {
     setIsProcessing(true);
     setTxError(null);
     setTxHash(null);
-    setIsRateLimited(false);
 
     try {
       if (!job) return;
       if (!freelancer) return;
-      if (!employer) return;
       if (!activeAccount) {
         setTxError("Please connect your wallet first");
         return;
@@ -136,7 +148,7 @@ export default function Page() {
       console.log("Submitting transaction...");
       // Sign and submit in one step
       const committedTxn = await aptos.signAndSubmitTransaction({
-        signer: activeAccount,
+        signer: privateKey || activeAccount,
         transaction,
       });
       console.log("Transaction submitted, hash:", committedTxn.hash);
@@ -147,114 +159,43 @@ export default function Page() {
       });
       console.log("Transaction result:", result);
 
+      const data = await supabase.auth.getUser();
+
+      if (!data?.data?.user?.id) {
+        throw new Error("User not found");
+      }
+
+      const company = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", data.data.user.id)
+        .single();
+
       if (result.success) {
         setTxHash(result.hash);
         console.log("Recording transaction in database...");
-        
-        // Log the current employer state for debugging
-        console.log("Current employer state:", {
-          id: employer.id,
-          company_id: employer.company_id
-        });
-
-        // First verify the employer exists by their ID
-        const { data: employerCheck, error: employerCheckError } = await supabase
-          .from("employers")
-          .select("id")
-          .eq("id", employer.id)
-          .single();
-
-        if (employerCheckError || !employerCheck) {
-          console.error("Failed to verify employer:", employerCheckError);
-          throw new Error("Failed to verify employer details. Please try again.");
-        }
-
-        console.log("Verified employer details:", employerCheck);
-        
-        console.log("Transaction data to insert:", {
+        await supabase.from("transactions").insert({
           contractor_id: freelancer.id,
           usdc_price: job.rate,
           usdc_amount: amount,
+          company_id: company.data.id,
           status: "completed",
           tx_hash: result.hash,
-          company_id: employer.id, // Use employer.id instead of company_id
         });
-        
-        // Check if transaction already exists
-        const { data: existingTx, error: existingTxError } = await supabase
-          .from("transactions")
-          .select("*")
-          .eq("tx_hash", result.hash)
-          .single()
-          .throwOnError();
 
-        if (existingTxError) {
-          console.error("Error checking existing transaction:", existingTxError);
-        }
-
-        if (existingTx) {
-          console.log("Transaction already recorded:", existingTx);
-          return; // Skip insertion if transaction exists
-        }
-        
-        // Insert new transaction
-        const { data: insertedTx, error: insertError } = await supabase
-          .from("transactions")
-          .insert({
-            contractor_id: freelancer.id,
-            usdc_price: job.rate,
-            usdc_amount: amount,
-            status: "completed",
-            tx_hash: result.hash,
-            company_id: employer.id,
-            created_at: new Date().toISOString()
-          })
-          .select()
-          .single()
-          .throwOnError();
-
-        if (insertError) {
-          console.error("Error inserting transaction:", insertError);
-          const pgError = insertError as PostgrestError;
-          console.error("Error details:", {
-            code: pgError.code,
-            message: pgError.message,
-            details: pgError.details
-          });
-          throw new Error(`Failed to record transaction in database: ${pgError.message}`);
-        }
-
-        console.log("Inserted transaction:", insertedTx);
-        
-        try {
-          console.log("Attempting to refresh data...");
-          await refetch();
-          console.log("Data refresh completed");
-        } catch (error) {
-          if (error instanceof Error && error.message.includes("429")) {
-            setIsRateLimited(true);
-            console.log("Rate limited, please wait 5 minutes before viewing updated transactions");
-          } else {
-            console.error("Error refreshing data:", error);
-          }
-        }
-        
-        alert("Payment successful! Note: Due to rate limiting, the transaction history may take a few minutes to update. Please check back in 5 minutes.");
+        console.log("Company:", company);
+        console.log("Transaction recorded in database");
+        alert("Payment successful!");
       } else {
         throw new Error("Transaction failed");
       }
     } catch (error) {
       console.error("Payment failed:", error);
-      if (error instanceof Error && error.message.includes("429")) {
-        setIsRateLimited(true);
-        setTxError("Rate limit reached. Please wait 5 minutes before making another payment.");
-      } else {
-        setTxError(
-          error instanceof Error
-            ? error.message
-            : "Payment failed. Please try again."
-        );
-      }
+      setTxError(
+        error instanceof Error
+          ? error.message
+          : "Payment failed. Please try again."
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -395,27 +336,13 @@ export default function Page() {
                   {txError && (
                     <div className="text-red-500 text-sm">{txError}</div>
                   )}
-                  {isRateLimited && (
-                    <div className="text-amber-500 text-sm">
-                      Rate limit reached. Please wait 5 minutes before making another payment or viewing updated transactions.
-                    </div>
-                  )}
                   {txHash && (
                     <div className="text-green-500 text-sm">
                       Transaction successful! Hash: {txHash}
-                      {isRateLimited && (
-                        <div className="mt-2 text-amber-500">
-                          Note: Due to rate limiting, the transaction history may take a few minutes to update. Please check back in 5 minutes.
-                        </div>
-                      )}
                     </div>
                   )}
-                  <Button 
-                    className="w-full" 
-                    onClick={handlePayment}
-                    disabled={isProcessing || isRateLimited}
-                  >
-                    {isProcessing ? "Processing..." : isRateLimited ? "Please wait 5 minutes..." : "Confirm Payment"}
+                  <Button className="w-full" onClick={handlePayment}>
+                    {isProcessing ? "Processing..." : "Confirm Payment"}
                   </Button>
                 </div>
               </DialogContent>

@@ -167,6 +167,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log("Employer data:", employer);
           setEmployer(employer);
 
+          // Fetch transactions for this employer's company
+          const { data: txData, error: txError } = await supabase
+            .from("transactions")
+            .select("*")
+            .eq("company_id", employer.id);
+
+          if (txError) {
+            console.error("Error fetching transactions:", txError);
+          } else {
+            setTransactions(txData || []);
+          }
+
           // Fetch contractors for this employer
           if (employer) {
             console.log("Fetching transactions for company_id:", employer.company_id);
