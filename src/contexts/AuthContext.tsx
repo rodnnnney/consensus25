@@ -111,10 +111,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchData = async () => {
     try {
+      console.log("Starting data fetch...");
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
+        console.log("No user found, clearing state");
         setUser(null);
         setUserRow(null);
         setEmployer(null);
@@ -129,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Fetch user role
+      console.log("Fetching user role...");
       const userRowRes = await supabase
         .from("users")
         .select("*")
@@ -151,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Fetch employer data if user is an employer
       if (userRowRes.data?.role === "employer") {
+        console.log("Fetching employer data...");
         const { data: employer, error: employerError } = await supabase
           .from("employers")
           .select("*")
@@ -160,10 +164,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (employerError) {
           console.error("Error fetching employer data:", employerError);
         } else {
+          console.log("Employer data:", employer);
           setEmployer(employer);
 
           // Fetch contractors for this employer
           if (employer) {
+            console.log("Fetching transactions for company_id:", employer.company_id);
+            // Fetch transactions
+            const { data: txData, error: txError } = await supabase
+              .from("transactions")
+              .select("*")
+              .eq("company_id", employer.company_id);
+
+            if (txError) {
+              console.error("Error fetching transactions:", txError);
+            } else {
+              console.log("Fetched transactions:", txData);
+              setTransactions(txData || []);
+            }
+
+            console.log("Fetching contractors...");
             const { data: contractorsData, error: contractorsError } =
               await supabase
                 .from("freelancers")
@@ -173,10 +193,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (contractorsError) {
               console.error("Error fetching contractors:", contractorsError);
             } else {
+              console.log("Fetched contractors:", contractorsData);
               setContractors(contractorsData || []);
             }
 
-            // Fetch invitations
+            console.log("Fetching invitations...");
             const { data: invitationsData, error: invitationsError } =
               await supabase
                 .from("invitations")
@@ -187,21 +208,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.error("Error fetching invitations:", invitationsError);
             } else {
               setInvitations(invitationsData || []);
-            }
-
-            // Fetch transactions
-            const contractorIds = (contractorsData || []).map((c) => c.id);
-            if (contractorIds.length > 0) {
-              const { data: txData, error: txError } = await supabase
-                .from("transactions")
-                .select("*")
-                .in("contractor_id", contractorIds);
-
-              if (txError) {
-                console.error("Error fetching transactions:", txError);
-              } else {
-                setTransactions(txData || []);
-              }
             }
           }
         }

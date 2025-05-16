@@ -18,6 +18,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Job, useAuth } from "@/contexts/AuthContext";
 import { decodeIdToken } from "../core/idToken";
+import { DollarSign } from "lucide-react";
 
 const USDC_FAUCET_URL = "https://faucet.circle.com/";
 const APT_FAUCET_URL = "https://aptos.dev/en/network/faucet";
@@ -133,6 +134,16 @@ const EmployerDashboard = () => {
       <header>
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Employer Dashboard</h1>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => router.push('/employer/transactions')}
+            >
+              <DollarSign className="h-4 w-4" />
+              Transaction History
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -280,8 +291,19 @@ const EmployerDashboard = () => {
               {/* USDC Balance Card */}
               <Card>
                 <CardHeader>
-                  <CardTitle>USDC Balance</CardTitle>
-                  <CardDescription>Your USDC token balance</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>USDC Balance</CardTitle>
+                      <CardDescription>Your USDC token balance</CardDescription>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="text-primary hover:text-primary/80"
+                      onClick={() => router.push('/employer/transactions')}
+                    >
+                      View History
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">

@@ -1,32 +1,18 @@
 // Copyright © Aptos
 // SPDX-License-Identifier: Apache-2.0
 
-import { Aptos, AptosConfig, ClientConfig, Network } from "@aptos-labs/ts-sdk";
+import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 export const LocalStorageKeys = {
   keylessAccounts: "@aptos-connect/keyless-accounts",
 };
 
-interface Args {
-  nodeApiUrl: string;
-  apiKey: string;
-}
-
 export const testnetClient = new Aptos(
   new AptosConfig({ 
-    network: Network.TESTNET
+    network: Network.TESTNET,
+    // Use public RPC endpoints
+    fullnode: "https://fullnode.testnet.aptoslabs.com/v1",
+    indexer: "https://indexer-testnet.staging.gcp.aptosdev.com/v1/graphql"
   })
 );
-
-export const testnetClient1 = async () => {
-  const clientConfig: ClientConfig = {
-    API_KEY: process.env.NEXT_PUBLIC_APTOS_API_KEY
-  };
-  const config = new AptosConfig({
-    fullnode: 'https://testnet.aptoslabs.com',
-    network: Network.TESTNET,
-    clientConfig
-  });
-  return new Aptos(config);
-};
 
 export const GOOGLE_CLIENT_ID = "489298120493-hn1djokaafumh7qtadq5ehnje0b4rg8k.apps.googleusercontent.com";
