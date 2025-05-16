@@ -168,33 +168,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setEmployer(employer);
 
           // Fetch transactions for this employer's company
+          console.log("Fetching transactions for employer company:", employer.id);
           const { data: txData, error: txError } = await supabase
             .from("transactions")
-            .select("*")
-            .eq("company_id", employer.id);
+            .select(`
+              *,
+              contractor:freelancers!contractor_id(
+                id,
+                first_name,
+                last_name,
+                email,
+                profile_image,
+                country
+              )
+            `)
+            .eq("company_id", employer.id)
+            .not("company_id", "is", null);
 
           if (txError) {
-            console.error("Error fetching transactions:", txError);
+            console.error("Error fetching employer transactions:", txError);
+            console.error("Error details:", {
+              code: txError.code,
+              message: txError.message,
+              details: txError.details,
+              hint: txError.hint
+            });
           } else {
+            console.log("Raw employer transaction data:", txData);
+            console.log("Number of employer transactions found:", txData?.length || 0);
+            if (txData?.length > 0) {
+              console.log("Sample employer transaction:", txData[0]);
+            }
             setTransactions(txData || []);
           }
 
           // Fetch contractors for this employer
           if (employer) {
-            console.log("Fetching transactions for company_id:", employer.company_id);
-            // Fetch transactions
-            const { data: txData, error: txError } = await supabase
-              .from("transactions")
-              .select("*")
-              .eq("company_id", employer.company_id);
-
-            if (txError) {
-              console.error("Error fetching transactions:", txError);
-            } else {
-              console.log("Fetched transactions:", txData);
-              setTransactions(txData || []);
-            }
-
             console.log("Fetching contractors...");
             const { data: contractorsData, error: contractorsError } =
               await supabase
@@ -238,14 +247,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setContractor(freelancer);
 
           // Fetch transactions for this freelancer
+          console.log("Fetching transactions for freelancer:", freelancer.id);
           const { data: txData, error: txError } = await supabase
             .from("transactions")
-            .select("*")
+            .select(`
+              *,
+              employer:employers(
+                id,
+                company_name,
+                profile_image,
+                country
+              )
+            `)
             .eq("contractor_id", freelancer.id);
 
           if (txError) {
             console.error("Error fetching transactions:", txError);
+            console.error("Error details:", {
+              code: txError.code,
+              message: txError.message,
+              details: txError.details,
+              hint: txError.hint
+            });
           } else {
+            console.log("Raw transaction data:", txData);
+            console.log("Number of transactions found:", txData?.length || 0);
+            if (txData?.length > 0) {
+              console.log("Sample transaction:", txData[0]);
+            }
             setTransactions(txData || []);
           }
         }

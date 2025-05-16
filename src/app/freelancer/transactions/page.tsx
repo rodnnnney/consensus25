@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Transaction } from "@/contexts/AuthContext";
 import {
   Card,
   CardContent,
@@ -26,9 +27,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowUpDown, DollarSign } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, DollarSign, Building } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
+
+interface TransactionEmployer {
+  id: string;
+  company_name: string;
+  profile_image?: string | null;
+  country?: string | null;
+}
+
+type EnhancedTransaction = Transaction & {
+  employer: TransactionEmployer;
+};
 
 export default function TransactionsPage() {
   const { transactions } = useAuth();
@@ -39,6 +52,11 @@ export default function TransactionsPage() {
     key: "created_at",
     direction: "desc",
   });
+
+  // Add debugging logs
+  useEffect(() => {
+    console.log("Current transactions with employer data:", transactions);
+  }, [transactions]);
 
   // Sort transactions
   const sortedTransactions = [...transactions].sort((a, b) => {
@@ -61,7 +79,8 @@ export default function TransactionsPage() {
   const filteredTransactions = sortedTransactions.filter((tx) => {
     const matchesSearch =
       tx.tx_hash?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tx.usdc_amount.toString().includes(searchTerm);
+      tx.usdc_amount.toString().includes(searchTerm) ||
+      (tx as EnhancedTransaction).employer?.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || tx.status?.toLowerCase() === statusFilter;
     return matchesSearch && matchesStatus;
@@ -93,7 +112,7 @@ export default function TransactionsPage() {
         <CardHeader>
           <CardTitle>Your Payments</CardTitle>
           <CardDescription>
-            View and manage your payment history
+            View and manage your payment history from employers
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -101,7 +120,7 @@ export default function TransactionsPage() {
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <Input
-                  placeholder="Search by transaction hash or amount..."
+                  placeholder="Search by employer, transaction hash, or amount..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="max-w-sm"
@@ -128,6 +147,7 @@ export default function TransactionsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
+                    <TableHead>Employer</TableHead>
                     <TableHead>
                       <Button
                         variant="ghost"
@@ -143,50 +163,85 @@ export default function TransactionsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTransactions.map((tx) => (
-                    <TableRow key={tx.id}>
-                      <TableCell>
-                        {new Date(tx.created_at || "").toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 font-medium text-primary">
-                          <DollarSign className="h-4 w-4" />
-                          {tx.usdc_amount} USDC
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {tx.tx_hash ? (
-                          <a
-                            href={`https://explorer.aptoslabs.com/txn/${tx.tx_hash}?network=testnet`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline"
+                  {filteredTransactions.map((tx) => {
+                    const enhancedTx = tx as EnhancedTransaction;
+                    return (
+                      <TableRow key={tx.id}>
+                        <TableCell>
+                          {new Date(tx.created_at || "").toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                              {enhancedTx.employer?.profile_image ? (
+                                <Image
+                                  src={enhancedTx.employer.profile_image}
+                                  alt="Company"
+                                  width={32}
+                                  height={32}
+                                  className="rounded-full"
+                                />
+                              ) : (
+                                <Building className="h-4 w-4 text-primary" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium">
+                                {enhancedTx.employer?.company_name || "Direct Payment"}
+                              </div>
+                              {enhancedTx.employer?.country && (
+                                <div className="text-sm text-muted-foreground">
+                                  {enhancedTx.employer.country}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 font-medium text-primary">
+                            <DollarSign className="h-4 w-4" />
+                            {tx.usdc_amount} USDC
+                          </div>
+                          {tx.fiat_equivalent && (
+                            <div className="text-sm text-muted-foreground">
+                              ≈ ${tx.fiat_equivalent}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {tx.tx_hash ? (
+                            <a
+                              href={`https://explorer.aptoslabs.com/txn/${tx.tx_hash}?network=testnet`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-500 hover:underline"
+                            >
+                              {tx.tx_hash.slice(0, 8)}...{tx.tx_hash.slice(-8)}
+                            </a>
+                          ) : (
+                            "N/A"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              tx.status === "completed"
+                                ? "default"
+                                : tx.status === "pending"
+                                ? "secondary"
+                                : "destructive"
+                            }
                           >
-                            {tx.tx_hash.slice(0, 8)}...{tx.tx_hash.slice(-8)}
-                          </a>
-                        ) : (
-                          "N/A"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            tx.status === "completed"
-                              ? "default"
-                              : tx.status === "pending"
-                              ? "secondary"
-                              : "destructive"
-                          }
-                        >
-                          {tx.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            {tx.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                   {filteredTransactions.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         className="h-24 text-center text-muted-foreground"
                       >
                         No transactions found
