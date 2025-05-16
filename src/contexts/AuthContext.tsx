@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-
+import { AccountAddressInput } from "@aptos-labs/ts-sdk";
 type User = {
   id: string;
   role: "employer" | "freelancer";
@@ -48,7 +48,7 @@ export interface Freelancer {
   twitter?: string | null;
   site?: string | null;
   farcaster?: string | null;
-  wallet_address?: string | null;
+  wallet_address?: AccountAddressInput | null;
   employer_id?: string | null;
   email?: string | null;
   profile_image?: string | null;
@@ -181,7 +181,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Then fetch this employer's transactions
           const { data: txData, error: txError } = await supabase
             .from("transactions")
-            .select(`
+            .select(
+              `
               id,
               contractor_id,
               usdc_price,
@@ -198,7 +199,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 profile_image,
                 country
               )
-            `)
+            `
+            )
             .eq("company_id", employer.id)
             .not("company_id", "is", null);
 
@@ -208,11 +210,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               code: txError.code,
               message: txError.message,
               details: txError.details,
-              hint: txError.hint
+              hint: txError.hint,
             });
           } else {
             console.log("Raw employer transaction data:", txData);
-            console.log("Number of employer transactions found:", txData?.length || 0);
+            console.log(
+              "Number of employer transactions found:",
+              txData?.length || 0
+            );
             if (txData?.length > 0) {
               console.log("Sample employer transaction:", txData[0]);
             }
@@ -276,7 +281,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Now fetch transactions for this specific freelancer
           const { data: txData, error: txError } = await supabase
             .from("transactions")
-            .select(`
+            .select(
+              `
               id,
               contractor_id,
               usdc_price,
@@ -291,7 +297,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 profile_image,
                 country
               )
-            `)
+            `
+            )
             .eq("contractor_id", freelancer.id);
 
           if (txError) {
@@ -300,7 +307,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               code: txError.code,
               message: txError.message,
               details: txError.details,
-              hint: txError.hint
+              hint: txError.hint,
             });
           } else {
             console.log("Raw transaction data:", txData);

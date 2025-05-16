@@ -18,6 +18,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Job, useAuth } from "@/contexts/AuthContext";
 import { decodeIdToken } from "../core/idToken";
+import { KeylessAccount } from "@aptos-labs/ts-sdk";
 import { DollarSign } from "lucide-react";
 
 const USDC_FAUCET_URL = "https://faucet.circle.com/";
@@ -147,7 +148,7 @@ const EmployerDashboard = () => {
             <Button
               variant="outline"
               className="flex items-center gap-2"
-              onClick={() => router.push('/employer/transactions')}
+              onClick={() => router.push("/employer/transactions")}
             >
               <DollarSign className="h-4 w-4" />
               Transaction History
@@ -308,7 +309,7 @@ const EmployerDashboard = () => {
                     <Button
                       variant="ghost"
                       className="text-primary hover:text-primary/80"
-                      onClick={() => router.push('/employer/transactions')}
+                      onClick={() => router.push("/employer/transactions")}
                     >
                       View History
                     </Button>
