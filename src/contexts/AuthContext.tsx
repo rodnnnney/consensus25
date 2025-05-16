@@ -176,7 +176,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .from("transactions")
             .select(
               `
-              *,
+              id,
+              contractor_id,
+              usdc_price,
+              usdc_amount,
+              created_at,
+              status,
+              tx_hash,
+              company_id,
               contractor:freelancers!contractor_id(
                 id,
                 first_name,
@@ -260,7 +267,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .from("transactions")
             .select(
               `
-              *,
+              id,
+              contractor_id,
+              usdc_price,
+              usdc_amount,
+              created_at,
+              status,
+              tx_hash,
+              company_id,
               employer:employers(
                 id,
                 company_name,
