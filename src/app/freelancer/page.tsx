@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useKeylessAccounts } from "../core/useKeylessAccounts";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,17 +10,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Bell, Check, DollarSign, Twitter, Globe } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { testnetClient } from "../core/constants";
+import { HexInvalidReason } from "@aptos-labs/ts-sdk";
 
 const FreelancerDashboard = () => {
   const { activeAccount } = useKeylessAccounts();
@@ -31,20 +29,67 @@ const FreelancerDashboard = () => {
   const [newPayments, setNewPayments] = useState<any[]>([]);
   const router = useRouter();
 
+  useEffect(() => {
+    const fetchBalances = async () => {
+      try {
+        if (!Freelancer?.wallet_address) {
+          console.log("No wallet address found");
+          return;
+        }
+
+        console.log("Fetching balances for wallet:", Freelancer.wallet_address);
+        const accountCoinsData = await testnetClient.getAccountCoinsData({
+          accountAddress: Freelancer.wallet_address,
+          options: { limit: 10 },
+        });
+
+        console.log("Received coin data:", accountCoinsData);
+
+        // Find APT and USDC balances
+        let aptBalance = "0";
+        let usdcBalance = "0";
+
+        for (const coin of accountCoinsData) {
+          if (
+            coin.asset_type === "0x1::aptos_coin::AptosCoin" ||
+            coin.metadata?.symbol === "APT"
+          ) {
+            aptBalance = (Number(coin.amount) / 1e8).toString(); // Adjust decimals if needed
+          }
+          if (
+            coin.metadata?.symbol === "USDC" ||
+            (coin.asset_type && coin.asset_type.toLowerCase().includes("usdc"))
+          ) {
+            usdcBalance = (Number(coin.amount) / 1e6).toString(); // USDC is usually 6 decimals
+          }
+        }
+
+        setAptBalance(aptBalance);
+        setUsdcBalance(usdcBalance);
+      } catch (error) {
+        console.error("Error fetching balances:", error);
+        setAptBalance("0");
+        setUsdcBalance("0");
+      }
+    };
+
+    fetchBalances();
+  }, [Freelancer?.wallet_address]);
+
   // Track new payments
   useEffect(() => {
-    const lastChecked = localStorage.getItem('lastPaymentCheck') || '0';
-    const newTxs = transactions.filter(tx => 
-      new Date(tx.created_at || '').getTime() > parseInt(lastChecked)
+    const lastChecked = localStorage.getItem("lastPaymentCheck") || "0";
+    const newTxs = transactions.filter(
+      (tx) => new Date(tx.created_at || "").getTime() > parseInt(lastChecked)
     );
     setNewPayments(newTxs);
-    localStorage.setItem('lastPaymentCheck', Date.now().toString());
+    localStorage.setItem("lastPaymentCheck", Date.now().toString());
   }, [transactions]);
 
   // Mark payments as read
   const handleMarkAsRead = () => {
     setNewPayments([]);
-    localStorage.setItem('lastPaymentCheck', Date.now().toString());
+    localStorage.setItem("lastPaymentCheck", Date.now().toString());
   };
 
   return (
@@ -61,12 +106,16 @@ const FreelancerDashboard = () => {
               <Button
                 variant="outline"
                 className="flex items-center gap-2"
-                onClick={() => router.push('/freelancer/transactions')}
+                onClick={() => router.push("/freelancer/transactions")}
               >
                 <DollarSign className="h-4 w-4" />
                 Transaction History
               </Button>
-              <Button variant="outline" onClick={handleMarkAsRead} className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleMarkAsRead}
+                className="flex items-center gap-2"
+              >
                 <Check className="w-4 h-4" />
                 Mark all as read
               </Button>
@@ -74,19 +123,29 @@ const FreelancerDashboard = () => {
           </div>
           <div className="grid grid-cols-1 gap-4">
             {newPayments.map((payment) => (
-              <Alert key={payment.id} className="border-2 border-primary/20 bg-background">
+              <Alert
+                key={payment.id}
+                className="border-2 border-primary/20 bg-background"
+              >
                 <DollarSign className="h-5 w-5 text-primary" />
                 <AlertTitle className="text-primary font-semibold">
                   Payment Received! 🎉
                 </AlertTitle>
                 <AlertDescription className="mt-2 flex items-center justify-between">
                   <div className="space-y-1">
-                    <p>You've received a payment of <span className="font-bold text-primary">{payment.usdc_amount} USDC</span></p>
-                    <p className="text-sm text-muted-foreground">
-                      Transaction ID: {payment.tx_hash?.slice(0, 8)}...{payment.tx_hash?.slice(-8)}
+                    <p>
+                      You've received a payment of{" "}
+                      <span className="font-bold text-primary">
+                        {payment.usdc_amount} USDC
+                      </span>
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Received: {new Date(payment.created_at || '').toLocaleString()}
+                      Transaction ID: {payment.tx_hash?.slice(0, 8)}...
+                      {payment.tx_hash?.slice(-8)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Received:{" "}
+                      {new Date(payment.created_at || "").toLocaleString()}
                     </p>
                   </div>
                   <Badge variant="outline" className="border-primary/20">
@@ -216,7 +275,7 @@ const FreelancerDashboard = () => {
               <Button
                 variant="ghost"
                 className="text-primary hover:text-primary/80"
-                onClick={() => router.push('/freelancer/transactions')}
+                onClick={() => router.push("/freelancer/transactions")}
               >
                 View History
               </Button>
@@ -236,11 +295,16 @@ const FreelancerDashboard = () => {
               </div>
               {/* Recent Transactions Preview */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">Recent Transactions</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">
+                  Recent Transactions
+                </h4>
                 {transactions.slice(0, 3).map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between text-sm">
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between text-sm"
+                  >
                     <span className="text-muted-foreground">
-                      {new Date(tx.created_at || '').toLocaleDateString()}
+                      {new Date(tx.created_at || "").toLocaleDateString()}
                     </span>
                     <span className="font-medium text-primary">
                       +{tx.usdc_amount} USDC
