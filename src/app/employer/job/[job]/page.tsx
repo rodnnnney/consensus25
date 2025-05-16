@@ -49,12 +49,17 @@ export default function Page() {
   useEffect(() => {
     if (activeAccount) {
       setPrivateKey(activeAccount);
-      // Save to localStorage
       localStorage.setItem("ephemeralPrivateKey", activeAccount.toString());
     }
 
     const fetchFreelancer = async () => {
-      if (!job?.userid) return;
+      console.log("Job:", job);
+      console.log("Job userid:", job?.userid);
+
+      if (!job?.userid) {
+        console.log("No job or userid found");
+        return;
+      }
 
       try {
         const { data, error } = await supabase
@@ -62,6 +67,8 @@ export default function Page() {
           .select("*")
           .eq("id", job.userid)
           .single();
+
+        console.log("Supabase response:", { data, error });
 
         if (error) {
           console.error("Error fetching freelancer:", error);
@@ -151,6 +158,18 @@ export default function Page() {
       });
       console.log("Transaction result:", result);
 
+      const data = await supabase.auth.getUser();
+
+      if (!data?.data?.user?.id) {
+        throw new Error("User not found");
+      }
+
+      const company = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", data.data.user.id)
+        .single();
+
       if (result.success) {
         setTxHash(result.hash);
         console.log("Recording transaction in database...");
@@ -158,9 +177,12 @@ export default function Page() {
           contractor_id: freelancer.id,
           usdc_price: job.rate,
           usdc_amount: amount,
+          company_id: company.data.id,
           status: "completed",
           tx_hash: result.hash,
         });
+
+        console.log("Company:", company);
         console.log("Transaction recorded in database");
         alert("Payment successful!");
       } else {

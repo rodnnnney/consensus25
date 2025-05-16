@@ -162,6 +162,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setEmployer(employer);
 
+          // Fetch transactions for this employer's company
+          const { data: txData, error: txError } = await supabase
+            .from("transactions")
+            .select("*")
+            .eq("company_id", employer.id);
+
+          if (txError) {
+            console.error("Error fetching transactions:", txError);
+          } else {
+            setTransactions(txData || []);
+          }
+
           // Fetch contractors for this employer
           if (employer) {
             const { data: contractorsData, error: contractorsError } =
@@ -187,21 +199,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.error("Error fetching invitations:", invitationsError);
             } else {
               setInvitations(invitationsData || []);
-            }
-
-            // Fetch transactions
-            const contractorIds = (contractorsData || []).map((c) => c.id);
-            if (contractorIds.length > 0) {
-              const { data: txData, error: txError } = await supabase
-                .from("transactions")
-                .select("*")
-                .in("contractor_id", contractorIds);
-
-              if (txError) {
-                console.error("Error fetching transactions:", txError);
-              } else {
-                setTransactions(txData || []);
-              }
             }
           }
         }
