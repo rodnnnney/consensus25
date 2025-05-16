@@ -41,14 +41,15 @@ export default function TransactionsPage() {
     direction: "desc",
   });
 
-  // Add debugging logs
+  // Debug logs
   useEffect(() => {
-    console.log("Current transactions:", transactions);
-    console.log("Current freelancers:", freelancers);
+    console.log("Raw transactions from context:", transactions);
+    console.log("Available freelancers:", freelancers);
   }, [transactions, freelancers]);
 
   // Sort transactions
-  const sortedTransactions = [...transactions].sort((a, b) => {
+  const sortedTransactions = [...(transactions || [])].sort((a, b) => {
+    console.log("Sorting transaction:", { a, b });
     if (sortConfig.key === "created_at") {
       return sortConfig.direction === "asc"
         ? new Date(a.created_at || "").getTime() -
@@ -64,10 +65,13 @@ export default function TransactionsPage() {
     return 0;
   });
 
+  console.log("Sorted transactions:", sortedTransactions);
+
   // Filter transactions
   const filteredTransactions = sortedTransactions.filter((tx) => {
+    console.log("Filtering transaction:", tx);
     const freelancer = freelancers.find((f) => f.id === tx.contractor_id);
-    console.log("Filtering transaction:", tx, "Matching freelancer:", freelancer);
+    console.log("Found freelancer for transaction:", freelancer);
     const matchesSearch =
       tx.tx_hash?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tx.usdc_amount.toString().includes(searchTerm) ||
@@ -78,10 +82,7 @@ export default function TransactionsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Add debug log for filtered results
-  useEffect(() => {
-    console.log("Filtered transactions:", filteredTransactions);
-  }, [filteredTransactions]);
+  console.log("Filtered transactions:", filteredTransactions);
 
   const handleSort = (key: string) => {
     setSortConfig((current) => ({

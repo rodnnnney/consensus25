@@ -53,13 +53,14 @@ export default function TransactionsPage() {
     direction: "desc",
   });
 
-  // Add debugging logs
+  // Debug logs
   useEffect(() => {
-    console.log("Current transactions with employer data:", transactions);
+    console.log("Raw transactions from context:", transactions);
   }, [transactions]);
 
   // Sort transactions
-  const sortedTransactions = [...transactions].sort((a, b) => {
+  const sortedTransactions = [...(transactions || [])].sort((a, b) => {
+    console.log("Sorting transaction:", { a, b });
     if (sortConfig.key === "created_at") {
       return sortConfig.direction === "asc"
         ? new Date(a.created_at || "").getTime() -
@@ -75,8 +76,11 @@ export default function TransactionsPage() {
     return 0;
   });
 
+  console.log("Sorted transactions:", sortedTransactions);
+
   // Filter transactions
   const filteredTransactions = sortedTransactions.filter((tx) => {
+    console.log("Filtering transaction:", tx);
     const matchesSearch =
       tx.tx_hash?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tx.usdc_amount.toString().includes(searchTerm) ||
@@ -85,6 +89,8 @@ export default function TransactionsPage() {
       statusFilter === "all" || tx.status?.toLowerCase() === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  console.log("Filtered transactions:", filteredTransactions);
 
   const handleSort = (key: string) => {
     setSortConfig((current) => ({
