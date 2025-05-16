@@ -1,5 +1,7 @@
 # Giggle - Stablecoin based freelancing platform
 
+## Demo videos
+
 [![Giggle - Freelancer POV](https://cdn.loom.com/images/originals/c81784967af5450ab15c391abe631c3a.jpg)](https://www.loom.com/share/c81784967af5450ab15c391abe631c3a)
 [![Giggle - Employer POV](https://cdn.loom.com/images/originals/035e41fbd52e47f58d0cc6788ff44b2d.jpg)](https://www.loom.com/share/035e41fbd52e47f58d0cc6788ff44b2d)
 
