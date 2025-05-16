@@ -13,17 +13,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { shortenString } from "../employer/util/shorten";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Job, useAuth } from "@/contexts/AuthContext";
 import { decodeIdToken } from "../core/idToken";
 import { DollarSign, BriefcaseBusiness, Plus } from "lucide-react";
+import { KeylessAccount } from "@aptos-labs/ts-sdk";
 
 const USDC_FAUCET_URL = "https://faucet.circle.com/";
 const APT_FAUCET_URL = "https://aptos.dev/en/network/faucet";
 
 const FreelancerDashboard = () => {
-  const { activeAccount, switchKeylessAccount, accounts } = useKeylessAccounts();
+  const { activeAccount, switchKeylessAccount, accounts } =
+    useKeylessAccounts();
   const { jobs, Freelancer } = useAuth();
   const ephemeralKeyPair = useEphemeralKeyPair();
   const [loginUrl, setLoginUrl] = useState<string>("");
@@ -137,7 +138,7 @@ const FreelancerDashboard = () => {
             <Button
               variant="outline"
               className="flex items-center gap-2"
-              onClick={() => router.push('/freelancer/transactions')}
+              onClick={() => router.push("/freelancer/transactions")}
             >
               <DollarSign className="h-4 w-4" />
               Transaction History
@@ -145,14 +146,14 @@ const FreelancerDashboard = () => {
             <Button
               variant="outline"
               className="flex items-center gap-2"
-              onClick={() => router.push('/freelancer/jobs')}
+              onClick={() => router.push("/freelancer/jobs")}
             >
               <BriefcaseBusiness className="h-4 w-4" />
               My Jobs
             </Button>
             <Button
               className="flex items-center gap-2"
-              onClick={() => router.push('/freelancer/post')}
+              onClick={() => router.push("/freelancer/post")}
             >
               <Plus className="h-4 w-4" />
               Post New Job
@@ -168,7 +169,8 @@ const FreelancerDashboard = () => {
             <CardHeader>
               <CardTitle>Welcome to Freelancer Dashboard</CardTitle>
               <CardDescription>
-                Sign in with your Google account to access your freelancer features
+                Sign in with your Google account to access your freelancer
+                features
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -249,7 +251,14 @@ const FreelancerDashboard = () => {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         >
-                          <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                          <rect
+                            width="14"
+                            height="14"
+                            x="8"
+                            y="8"
+                            rx="2"
+                            ry="2"
+                          />
                           <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
                         </svg>
                       </Button>
@@ -288,9 +297,7 @@ const FreelancerDashboard = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Recent Jobs</CardTitle>
-                  <CardDescription>
-                    Your recently posted jobs
-                  </CardDescription>
+                  <CardDescription>Your recently posted jobs</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -299,7 +306,9 @@ const FreelancerDashboard = () => {
                         <div
                           key={job.id}
                           className="p-4 border rounded-lg hover:bg-accent cursor-pointer"
-                          onClick={() => router.push(`/freelancer/jobs/${job.id}`)}
+                          onClick={() =>
+                            router.push(`/freelancer/jobs/${job.id}`)
+                          }
                         >
                           <div className="font-medium">{job.header}</div>
                           <div className="text-sm text-muted-foreground mt-1">
@@ -310,7 +319,8 @@ const FreelancerDashboard = () => {
                               {job.rate} USDC/hr
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              Posted {new Date(job.created_at).toLocaleDateString()}
+                              Posted{" "}
+                              {new Date(job.created_at).toLocaleDateString()}
                             </div>
                           </div>
                         </div>
