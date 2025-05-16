@@ -2,9 +2,32 @@
 
 A modern web application for freelancers to manage their profile, view balances, and handle job listings. Built with Next.js and React.
 
-## Features
+## Screenshots(Employer POV)
 
+### Employer Dashboard Page
 ![employer](./public/employerdash.png)
+
+### Employer Jobs
+![employer](./public/employerjobs.png)
+
+### Employer Payouts
+![employer](./public/employerpayments.png)
+
+## Screenshots(Freelancer POV)
+
+### Freelancer Dashboard Page
+![employer](./public/freelancer.png)
+
+### Freelancer Post Page
+![employer](./public/freelancer.png)
+
+### Freelancer Transactions Page
+![employer](./public/freelancer.png)
+
+### Freelancer Profile Page
+![employer](./public/freelancer.png)
+
+
 
 ### 1. Profile Management
 - Professional profile display with:
