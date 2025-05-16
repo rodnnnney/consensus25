@@ -23,11 +23,14 @@ import { HexInvalidReason } from "@aptos-labs/ts-sdk";
 const FreelancerDashboard = () => {
   const { activeAccount } = useKeylessAccounts();
   const { Freelancer, jobs, transactions } = useAuth();
-  const [showNewListingForm, setShowNewListingForm] = useState(false);
+
   const [aptBalance, setAptBalance] = useState<string>("0");
   const [usdcBalance, setUsdcBalance] = useState<string>("0");
   const [newPayments, setNewPayments] = useState<any[]>([]);
   const router = useRouter();
+
+  // Filter jobs to only show those belonging to the current freelancer
+  const filteredJobs = jobs.filter((job) => job.userid === Freelancer?.id);
 
   useEffect(() => {
     const fetchBalances = async () => {
@@ -330,7 +333,7 @@ const FreelancerDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {jobs.map((job) => (
+            {filteredJobs.map((job) => (
               <a
                 key={job.id}
                 onClick={() => router.push(`/freelancer/${job.id}`)}
@@ -367,7 +370,7 @@ const FreelancerDashboard = () => {
                 </Card>
               </a>
             ))}
-            {jobs.length === 0 && (
+            {filteredJobs.length === 0 && (
               <div className="col-span-2 text-center py-8 text-muted-foreground">
                 No active listings found. Click "Post New Listing" to create
                 one!
